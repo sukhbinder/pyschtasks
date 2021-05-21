@@ -19,7 +19,7 @@ def process_executable(executable, folder=os.getcwd()):
     if not executable:
         return None
 
-    if os.path.dirname(executable):
+    if os.path.exists(os.path.dirname(executable)):
         executable_sh = shutil.which(executable)
         exe_shex = [executable_sh]
     else:
@@ -32,24 +32,27 @@ def process_executable(executable, folder=os.getcwd()):
             exe_with_path = os.path.join(folder, exe_shex[0])
             if os.path.exists(exe_with_path):
                 executable_sh = exe_with_path
+            else:
+                executable_sh = executable
     exe_shex[0] = executable_sh
     return exe_shex
 
 
-def create(cmdline, task_name = "test_task", task_sch = "ONCE", task_st = "13:00", idletime=7):
+def create(cmdline, task_name = "test_task", task_sch = "ONCE", task_st = "13:00", idletime=7, add_setting=""):
     # schtasks /create /tn test_task /sc DAILY /st 12:50 /tr "C:\windows\system32\calc.exe"
     
     task_exe_list = process_executable(cmdline)
     task_exe = " ".join(task_exe_list)
 
     task_upper = task_sch.upper()
+    add_setting_list = add_setting.split(" ")
     if task_upper.startswith("ON"):
         if task_upper in ["ONIDLE"]:
             cmd = ["schtasks" , "/create", "/tn", task_name, "/sc", task_sch , "/tr" , task_exe , "/F", "/I", str(idletime)]
         else:
-            cmd = ["schtasks" , "/create", "/tn", task_name, "/sc", task_sch , "/tr" , task_exe , "/F"]
+            cmd = ["schtasks" , "/create", "/tn", task_name, "/sc", task_sch , "/tr" , task_exe , "/F"]+ add_setting_list
     else:
-        cmd = ["schtasks" , "/create", "/tn", task_name, "/sc", task_sch , "/st", task_st, "/tr" , task_exe , "/F"]
+        cmd = ["schtasks" , "/create", "/tn", task_name, "/sc", task_sch , "/st", task_st, "/tr" , task_exe , "/F"]+ add_setting_list
     
     iret = subprocess.Popen(cmd)
     return iret
@@ -112,11 +115,12 @@ class Job:
         return self
 
     def post(self):
-        iret = create(self.cmdline + " " + self.modifier_str, 
+        iret = create(self.cmdline, 
                       task_name=self.name,
                       task_sch=self.task_sch,
                       task_st=self.task_time,
-                      idletime=self.idletime)
+                      idletime=self.idletime,
+                      add_setting=self.modifier_str)
         return iret.returncode
 
     def delete(self):
