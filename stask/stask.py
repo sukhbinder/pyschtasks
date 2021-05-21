@@ -6,7 +6,9 @@ import shutil
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 
-VALID_STATUS = ( "MINUTE", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "ONCE", "ONSTART", "ONLOGON", "ONIDLE")
+VALID_STATUS = ("MINUTE", "HOURLY", "DAILY", "WEEKLY",
+                "MONTHLY", "ONCE", "ONSTART", "ONLOGON", "ONIDLE")
+
 
 def get_time_2min():
     now = datetime.now()+timedelta(minutes=2)
@@ -38,38 +40,54 @@ def process_executable(executable, folder=os.getcwd()):
     return exe_shex
 
 
-def create(cmdline, task_name = "test_task", task_sch = "ONCE", task_st = "13:00", idletime=7, add_setting=""):
+def create(cmdline, task_name="test_task", task_sch="ONCE", task_st="13:00", idletime=7, add_setting=""):
     # schtasks /create /tn test_task /sc DAILY /st 12:50 /tr "C:\windows\system32\calc.exe"
-    
+
     task_exe_list = process_executable(cmdline)
     task_exe = " ".join(task_exe_list)
 
     task_upper = task_sch.upper()
-    add_setting_list = add_setting.split(" ")
-    if task_upper.startswith("ON"):
+
+    if task_upper.startswith("ON") and task_upper != "ONCE":
         if task_upper in ["ONIDLE"]:
-            cmd = ["schtasks" , "/create", "/tn", task_name, "/sc", task_sch , "/tr" , task_exe , "/F", "/I", str(idletime)]
+            cmd = ["schtasks", "/create", "/tn", task_name, "/sc",
+                   task_sch, "/tr", task_exe, "/F", "/I", str(idletime)]
         else:
-            cmd = ["schtasks" , "/create", "/tn", task_name, "/sc", task_sch , "/tr" , task_exe , "/F"]+ add_setting_list
+            cmd = ["schtasks", "/create", "/tn", task_name,
+                   "/sc", task_sch, "/tr", task_exe, "/F"]
     else:
-        cmd = ["schtasks" , "/create", "/tn", task_name, "/sc", task_sch , "/st", task_st, "/tr" , task_exe , "/F"]+ add_setting_list
-    
+        cmd = ["schtasks", "/create", "/tn", task_name, "/sc",
+               task_sch, "/st", task_st, "/tr", task_exe, "/F"]
+
+    if len(add_setting) != 0:
+        add_setting_list = add_setting.split(" ")
+        cmd = cmd + add_setting_list
+    print(cmd)
     iret = subprocess.Popen(cmd)
     return iret
+
 
 def delete(task_name: str):
     # schtasks /Delete /TN test_task3 /F
     # task_name = "test_task"
-    cmd  = ["schtasks", "/Delete", "/TN", task_name, "/F"]
+    cmd = ["schtasks", "/Delete", "/TN", task_name, "/F"]
     iret = subprocess.Popen(cmd)
     return iret
 
+
 def tasklist(task_name: str):
-    cmd  = ["schtasks", "/Query", "/TN", task_name, "/V", "/FO", "LIST"]
+    cmd = ["schtasks", "/Query", "/TN", task_name, "/V", "/FO", "LIST"]
+    iret = subprocess.Popen(cmd)
+    return iret
+
+
+def runtask(task_name: str):
+    cmd = ["schtasks", "/run", "/tn", task_name, "/I"]
     iret = subprocess.Popen(cmd)
     return iret
 
 # schtasks /Query /TN test_task /V /FO LIST
+
 
 class Job:
     def __init__(self, name):
@@ -79,10 +97,14 @@ class Job:
         self.task_time = get_time_2min()
         self.idletime = 1
         self.modifier_str = ""
-    
+        self._isposted = False
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def __str__(self):
-        return "{0} runs at {1} {2} with {3}".format(self.name, self.task_time, self.task_sch, self.cmdline )
-    
+        return "{0} runs at {1} {2} with {3}".format(self.name, self.task_time, self.task_sch, self.cmdline)
+
     def do(self, cmdline: str):
         assert len(cmdline.strip()) != 0, "Invalid commandline"
         self.cmdline = cmdline
@@ -92,36 +114,37 @@ class Job:
         validtime = parse(timestr).strftime("%H:%M")
         self.task_time = validtime
         return self
-    
+
     def once(self):
         self.task_sch = VALID_STATUS[5]
         return self
-    
+
     def daily(self):
         self.task_sch = VALID_STATUS[2]
         return self
-    
+
     def weekly(self):
         self.task_sch = VALID_STATUS[3]
         return self
-    
+
     def monthly(self):
         self.task_sch = VALID_STATUS[4]
         return self
 
     def onidle(self, idletime=1):
-        assert idletime >=1 and idletime < 999, "Idletime should be in range 1-999"
+        assert idletime >= 1 and idletime < 999, "Idletime should be in range 1-999"
         self.idletime = idletime
         return self
 
     def post(self):
-        iret = create(self.cmdline, 
+        iret = create(self.cmdline,
                       task_name=self.name,
                       task_sch=self.task_sch,
                       task_st=self.task_time,
                       idletime=self.idletime,
                       add_setting=self.modifier_str)
-        return iret.returncode
+        self._isposted = True
+        return self
 
     def delete(self):
         iret = delete(self.name)
@@ -131,29 +154,32 @@ class Job:
         iret = tasklist(self.name)
         return iret.returncode
 
-    def every(self, minute:int = None, hour: int = None, day: int = None, weekly: int = None, monthly: int = None):
-        if minute:
-            self.task_sch = VALID_STATUS[0]
-            self.modifier_str = "/MO {}".format(minute)
-        
-        if hour:
-            self.task_sch = VALID_STATUS[1]
-            self.modifier_str = "/MO {}".format(hour)
+    def run(self):
+        iret = runtask(self.name)
+        return iret.returncode
 
-        if day:
-            assert day >=0 and day < 365, "Month should be within 1-365"
-            self.task_sch = VALID_STATUS[2]
-            self.modifier_str = "/MO {}".format(day)     
-        
-        if weekly:
-            assert weekly >=0 and weekly < 52, "Week should be within 1 to 52"
-            self.task_sch = VALID_STATUS[3]
-            self.modifier_str = "/MO {}".format(weekly)
-
-        if monthly:
-            assert monthly >=0 and monthly < 12, "Month should be within 1-12"
-            self.task_sch = VALID_STATUS[4]
-            self.modifier_str = "/MO {}".format(monthly)
-        
+    def minute(self):
+        self.task_sch = VALID_STATUS[0]
         return self
 
+    def hour(self):
+        self.task_sch = VALID_STATUS[1]
+        return self
+
+    def day(self):
+        self.task_sch = VALID_STATUS[2]
+        return self
+
+    def week(self):
+        self.task_sch = VALID_STATUS[3]
+        return self
+
+    def month(self):
+        self.task_sch = VALID_STATUS[4]
+        return self
+
+    def every(self, num: int):
+        # default minute if not provided
+        self.task_sch = VALID_STATUS[0]
+        self.modifier_str = "/MO {}".format(num)
+        return self
