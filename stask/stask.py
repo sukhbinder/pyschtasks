@@ -10,13 +10,13 @@ VALID_STATUS = ("MINUTE", "HOURLY", "DAILY", "WEEKLY",
                 "MONTHLY", "ONCE", "ONSTART", "ONLOGON", "ONIDLE")
 
 
-def get_time_2min():
+def _get_time_2min():
     now = datetime.now()+timedelta(minutes=2)
     time = now.strftime("%H:%M")
     return time
 
 
-def process_executable(executable, folder=os.getcwd()):
+def _process_executable(executable, folder=os.getcwd()):
 
     if not executable:
         return None
@@ -40,10 +40,10 @@ def process_executable(executable, folder=os.getcwd()):
     return exe_shex
 
 
-def create(cmdline, task_name="test_task", task_sch="ONCE", task_st="13:00", idletime=7, add_setting=""):
+def _create(cmdline, task_name="test_task", task_sch="ONCE", task_st="13:00", idletime=7, add_setting=""):
     # schtasks /create /tn test_task /sc DAILY /st 12:50 /tr "C:\windows\system32\calc.exe"
 
-    task_exe_list = process_executable(cmdline)
+    task_exe_list = _process_executable(cmdline)
     task_exe = " ".join(task_exe_list)
 
     task_upper = task_sch.upper()
@@ -67,7 +67,7 @@ def create(cmdline, task_name="test_task", task_sch="ONCE", task_st="13:00", idl
     return iret
 
 
-def delete(task_name: str):
+def _delete(task_name: str):
     # schtasks /Delete /TN test_task3 /F
     # task_name = "test_task"
     cmd = ["schtasks", "/Delete", "/TN", task_name, "/F"]
@@ -75,13 +75,13 @@ def delete(task_name: str):
     return iret
 
 
-def tasklist(task_name: str):
+def _tasklist(task_name: str):
     cmd = ["schtasks", "/Query", "/TN", task_name, "/V", "/FO", "LIST"]
     iret = subprocess.Popen(cmd)
     return iret
 
 
-def runtask(task_name: str):
+def _runtask(task_name: str):
     cmd = ["schtasks", "/run", "/tn", task_name, "/I"]
     iret = subprocess.Popen(cmd)
     return iret
@@ -94,7 +94,7 @@ class Job:
         self.name = name
         self.cmdline = ""
         self.task_sch = "ONCE"
-        self.task_time = get_time_2min()
+        self.task_time = _get_time_2min()
         self.idletime = 1
         self.modifier_str = ""
         self._isposted = False
@@ -134,10 +134,11 @@ class Job:
     def onidle(self, idletime=1):
         assert idletime >= 1 and idletime < 999, "Idletime should be in range 1-999"
         self.idletime = idletime
+        self.task_sch = VALID_STATUS[8]
         return self
 
     def post(self):
-        iret = create(self.cmdline,
+        iret = _create(self.cmdline,
                       task_name=self.name,
                       task_sch=self.task_sch,
                       task_st=self.task_time,
@@ -147,15 +148,15 @@ class Job:
         return self
 
     def delete(self):
-        iret = delete(self.name)
+        iret = _delete(self.name)
         return iret.returncode
 
     def list(self):
-        iret = tasklist(self.name)
+        iret = _tasklist(self.name)
         return iret.returncode
 
     def run(self):
-        iret = runtask(self.name)
+        iret = _runtask(self.name)
         return iret.returncode
 
     def minute(self):
