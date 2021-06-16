@@ -90,6 +90,22 @@ def _runtask(task_name: str):
 
 
 class Job:
+    """
+    A simplified api to call/schedule tasks in windows using ``schtasks``
+
+    Example:
+
+    # Schedule a one time job for 6:30 pm today
+    job = st.Job("test")
+    job.do("say hello").at("6:30pm").post()
+
+    # Schedule job to say hello daily as 8:00
+    job = Job("say_say")
+    job.do("say hello").at("8am").daily().post()
+
+    
+
+    """
     def __init__(self, name):
         self.name = name
         self.cmdline = ""
@@ -106,6 +122,16 @@ class Job:
         return "{0} runs at {1} {2} with {3}".format(self.name, self.task_time, self.task_sch, self.cmdline)
 
     def do(self, cmdline: str):
+        """
+        The task to perform wih schedule task.
+
+        Example:
+
+        job = Job("say_say")
+        job.do("say hello").at("08:00").daily()
+
+
+        """
         assert len(cmdline.strip()) != 0, "Invalid commandline"
         self.cmdline = cmdline
         return self
@@ -132,12 +158,24 @@ class Job:
         return self
 
     def onidle(self, idletime=1):
+        """
+        Schedules a schtask onidle
+
+        Example:
+
+        # schedule job if system idle for 10 mins
+        job.onidle(10)
+
+        """
         assert idletime >= 1 and idletime < 999, "Idletime should be in range 1-999"
         self.idletime = idletime
         self.task_sch = VALID_STATUS[8]
         return self
 
     def post(self):
+        """
+        Schedules the job
+        """
         iret = _create(self.cmdline,
                       task_name=self.name,
                       task_sch=self.task_sch,
@@ -148,14 +186,23 @@ class Job:
         return self
 
     def delete(self):
+        """
+        Deletes a schtask
+        """
         iret = _delete(self.name)
         return iret.returncode
 
     def list(self):
+        """
+        List the job
+        """
         iret = _tasklist(self.name)
         return iret.returncode
 
     def run(self):
+        """
+        Runs a scheduled job
+        """
         iret = _runtask(self.name)
         return iret.returncode
 
@@ -180,6 +227,24 @@ class Job:
         return self
 
     def every(self, num: int):
+        """
+        Schedule tasks for every unit of time.
+
+        Example:
+
+        # Schedule job for every minnute
+        job.every(10).minute()
+
+        # Schedule job for every 5 hours
+        job.every(5).hour()
+
+        # Schedule job for every 10 day
+        job.every(10).day()
+
+        # Schedule job for every 2 week
+        job.every(2).week()
+
+        """
         # default minute if not provided
         self.task_sch = VALID_STATUS[0]
         self.modifier_str = "/MO {}".format(num)
