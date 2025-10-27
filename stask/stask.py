@@ -86,6 +86,21 @@ def _runtask(task_name: str):
     iret = subprocess.Popen(cmd)
     return iret
 
+
+def _create_from_xml(task_name: str, xml_file: str):
+    if not os.path.exists(xml_file):
+        raise FileNotFoundError(f"XML file not found: {xml_file}")
+    cmd = ["schtasks", "/Create", "/TN", task_name, "/XML", xml_file, "/F"]
+    iret = subprocess.Popen(cmd)
+    return iret
+
+
+def _export_xml(task_name: str, xml_file: str):
+    with open(xml_file, "w") as f:
+        cmd = ["schtasks", "/Query", "/TN", task_name, "/XML"]
+        iret = subprocess.Popen(cmd, stdout=f)
+        return iret
+
 # schtasks /Query /TN test_task /V /FO LIST
 
 
@@ -249,3 +264,17 @@ class Job:
         self.task_sch = VALID_STATUS[0]
         self.modifier_str = "/MO {}".format(num)
         return self
+
+    def from_xml(self, xml_file: str):
+        """
+        Creates a task from an XML file.
+        """
+        iret = _create_from_xml(self.name, xml_file)
+        return iret.wait()
+
+    def to_xml(self, xml_file: str):
+        """
+        Exports a task to an XML file.
+        """
+        iret = _export_xml(self.name, xml_file)
+        return iret.wait()
