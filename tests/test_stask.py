@@ -1,3 +1,5 @@
+import sys
+import pytest
 from stask import stask as st
 
 
@@ -8,13 +10,15 @@ def test_job():
     assert job.task_sch == "DAILY"
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="windows only")
 def test_process_executable():
     str = "https://large-type.com/#Take%20a%20Break"
-    ret_list = st.process_executable(str)
+    ret_list = st._process_executable(str)
 
     assert str in ret_list
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="windows only")
 def test_simple():
     job = st.Job("test")
     job.do("say hello").post()
