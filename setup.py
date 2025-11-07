@@ -20,9 +20,9 @@ setup(
     author_email="sukh2010@yahoo.com",
     url = 'https://github.com/sukhbinder/pyschetaks',
     keywords = ["schtasks", "windows", "schedule", "computer", "api",],
-    # entry_points={
-    #     'console_scripts': ['sch = winsay.winsay:main', ],
-    # },
+    entry_points={
+        'console_scripts': ['stask = stask.cli:main', ],
+    },
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",

@@ -6,7 +6,7 @@ A simplified api to call/schedule tasks in windows using `schtasks`
 
 # Usage
 
-Here's how to schedule a task to run a command:
+Here's how to schedule a a task to run a command:
 
 ```python
 import stask
@@ -34,4 +34,26 @@ job.run()
 # List a scheduled task
 job = stask.Job("daily_task")
 job.list()
+```
+
+# CLI Usage
+
+You can also use `pyschtasks` from the command line:
+
+## Create a task
+
+```bash
+stask create -n my_task -c "notepad.exe" -s DAILY -a "09:00"
+```
+
+## Delete a task
+
+```bash
+stask delete -n my_task
+```
+
+## List a task
+
+```bash
+stask list -n my_task
 ```
