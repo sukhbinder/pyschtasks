@@ -1,6 +1,6 @@
 import pathlib
-from setuptools import find_packages, setup
 
+from setuptools import find_packages, setup
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
@@ -18,15 +18,28 @@ setup(
     long_description_content_type="text/markdown",
     author="sukhbinder",
     author_email="sukh2010@yahoo.com",
-    url = 'https://github.com/sukhbinder/pyschetaks',
-    keywords = ["schtasks", "windows", "schedule", "computer", "api",],
-    # entry_points={
-    #     'console_scripts': ['sch = winsay.winsay:main', ],
-    # },
+    url="https://github.com/sukhbinder/pyschetaks",
+    keywords=[
+        "schtasks",
+        "windows",
+        "schedule",
+        "computer",
+        "api",
+    ],
+    entry_points={
+        "console_scripts": [
+            "stask = stask.cli:main",
+        ],
+    },
+    install_requires=[
+        "dateutils",
+    ],
+    extra_require={
+        "test": ["pytest"],
+    },
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
     ],
-
 )
