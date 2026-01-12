@@ -91,13 +91,40 @@ def _runtask(task_name: str):
 
 def _update_task_power_settings(task_name: str):
     xml_file = os.path.join(tempfile.gettempdir(), task_name + ".xml")
-    cmd_export = ["schtasks", "/Query", "/TN", task_name, "/XML", "ONE"]
+    cmd_export = ["schtasks", "/Query", "/TN", task_name, "/XML"]
 
+    # Export the task XML
     with open(xml_file, "w") as f:
         subprocess.run(cmd_export, stdout=f, check=True)
 
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
+    # Read and parse the XML with correct encoding handling
+    try:
+        # Try to parse directly first - this should work if the file is properly encoded
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+    except ET.ParseError:
+        # If parsing fails due to encoding issues, read as binary and decode properly
+        try:
+            # Read as binary and decode with UTF-16 (without BOM)
+            with open(xml_file, 'rb') as f:
+                content_bytes = f.read()
+
+            # Try different UTF-16 variants
+            try:
+                content = content_bytes.decode('utf-16-le')
+            except UnicodeDecodeError:
+                try:
+                    content = content_bytes.decode('utf-16-be')
+                except UnicodeDecodeError:
+                    content = content_bytes.decode('utf-16', errors='ignore')
+
+            # Parse the XML string
+            root = ET.fromstring(content)
+        except Exception:
+            # Fallback to reading as UTF-8
+            with open(xml_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            root = ET.fromstring(content)
 
     namespace = "{http://schemas.microsoft.com/windows/2004/02/mit/task}"
     settings = root.find(f"{namespace}Settings")
@@ -110,7 +137,9 @@ def _update_task_power_settings(task_name: str):
     if stop_if_going is not None:
         stop_if_going.text = "false"
 
-    tree.write(xml_file)
+    # Write back with proper encoding
+    tree = ET.ElementTree(root)
+    tree.write(xml_file, encoding='utf-16', xml_declaration=True)
 
     cmd_update = ["schtasks", "/Create", "/TN", task_name, "/XML", xml_file, "/F"]
     subprocess.run(cmd_update, capture_output=True, check=True)
@@ -134,7 +163,7 @@ class Job:
     job = Job("say_say")
     job.do("say hello").at("8am").daily().post()
 
-    
+
 
     """
     def __init__(self, name):
