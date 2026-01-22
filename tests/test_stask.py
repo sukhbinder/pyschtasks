@@ -21,7 +21,7 @@ def test_process_executable():
 @pytest.mark.skipif(sys.platform != "win32", reason="windows only")
 def test_simple():
     job = st.Job("test")
-    job.do("notepad hello").post()
+    job.do("notepad").post()
     assert job.task_sch == "ONCE"
     assert job._isposted
     job.delete()
