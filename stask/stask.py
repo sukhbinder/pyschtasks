@@ -2,6 +2,8 @@ import subprocess
 import os
 import shlex
 import shutil
+import tempfile
+import xml.etree.ElementTree as ET
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -86,6 +88,64 @@ def _runtask(task_name: str):
     iret = subprocess.Popen(cmd)
     return iret
 
+
+def _update_task_power_settings(task_name: str):
+    xml_file = os.path.join(tempfile.gettempdir(), task_name + ".xml")
+    cmd_export = ["schtasks", "/Query", "/TN", task_name, "/XML"]
+
+    # Export the task XML
+    with open(xml_file, "w") as f:
+        subprocess.run(cmd_export, stdout=f, check=True)
+
+    # Read and parse the XML with correct encoding handling
+    try:
+        # Try to parse directly first - this should work if the file is properly encoded
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+    except ET.ParseError:
+        # If parsing fails due to encoding issues, read as binary and decode properly
+        try:
+            # Read as binary and decode with UTF-16 (without BOM)
+            with open(xml_file, 'rb') as f:
+                content_bytes = f.read()
+
+            # Try different UTF-16 variants
+            try:
+                content = content_bytes.decode('utf-16-le')
+            except UnicodeDecodeError:
+                try:
+                    content = content_bytes.decode('utf-16-be')
+                except UnicodeDecodeError:
+                    content = content_bytes.decode('utf-16', errors='ignore')
+
+            # Parse the XML string
+            root = ET.fromstring(content)
+        except Exception:
+            # Fallback to reading as UTF-8
+            with open(xml_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            root = ET.fromstring(content)
+
+    namespace = "{http://schemas.microsoft.com/windows/2004/02/mit/task}"
+    settings = root.find(f"{namespace}Settings")
+
+    disallow_start = settings.find(f"{namespace}DisallowStartIfOnBatteries")
+    if disallow_start is not None:
+        disallow_start.text = "false"
+
+    stop_if_going = settings.find(f"{namespace}StopIfGoingOnBatteries")
+    if stop_if_going is not None:
+        stop_if_going.text = "false"
+
+    # Write back with proper encoding
+    tree = ET.ElementTree(root)
+    tree.write(xml_file, encoding='utf-16', xml_declaration=True)
+
+    cmd_update = ["schtasks", "/Create", "/TN", task_name, "/XML", xml_file, "/F"]
+    subprocess.run(cmd_update, capture_output=True, check=True)
+    os.remove(xml_file)
+
+
 # schtasks /Query /TN test_task /V /FO LIST
 
 
@@ -103,7 +163,7 @@ class Job:
     job = Job("say_say")
     job.do("say hello").at("8am").daily().post()
 
-    
+
 
     """
     def __init__(self, name):
@@ -114,6 +174,7 @@ class Job:
         self.idletime = 1
         self.modifier_str = ""
         self._isposted = False
+        self.allow_on_battery = True
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -182,7 +243,15 @@ class Job:
                       task_st=self.task_time,
                       idletime=self.idletime,
                       add_setting=self.modifier_str)
+
+        if self.allow_on_battery:
+            _update_task_power_settings(self.name)
+
         self._isposted = True
+        return self
+
+    def run_on_ac_only(self):
+        self.allow_on_battery = False
         return self
 
     def delete(self):
