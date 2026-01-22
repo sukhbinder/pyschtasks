@@ -10,7 +10,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="pyschtasks",
-    version="1.0",
+    version="0.1.0",
     packages=find_packages(),
     license="Private",
     description="Schtasks api in windows",
