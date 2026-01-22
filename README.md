@@ -1,4 +1,12 @@
 # pyschtasks
+
+[![PyPI](https://img.shields.io/pypi/v/pyschtasks.svg)](https://pypi.org/project/pyschtasks/)
+[![Changelog](https://img.shields.io/github/v/release/sukhbinder/pyschtasks?include_prereleases&label=changelog)](https://github.com/sukhbinder/pyschtasks/releases)
+[![Tests](https://github.com/sukhbinder/pyschtasks/actions/workflows/test.yml/badge.svg)](https://github.com/sukhbinder/pyschtasks/actions/workflows/test.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/sukhbinder/pyschtasks/blob/master/LICENSE)
+
+
+
 A simplified api to call/schedule tasks in windows using `schtasks`
 
 # Install
