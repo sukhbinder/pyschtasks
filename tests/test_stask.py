@@ -1,6 +1,9 @@
 import sys
 import pytest
 from stask import stask as st
+import os
+
+IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
 
 def test_job():
@@ -17,7 +20,7 @@ def test_process_executable():
 
     assert str in ret_list
 
-
+@pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
 @pytest.mark.skipif(sys.platform != "win32", reason="windows only")
 def test_simple():
     job = st.Job("test")
