@@ -18,7 +18,7 @@ setup(
     long_description_content_type="text/markdown",
     author="sukhbinder",
     author_email="sukh2010@yahoo.com",
-    url="https://github.com/sukhbinder/pyschetaks",
+    url="https://github.com/sukhbinder/pyschtaks",
     keywords=[
         "schtasks",
         "windows",
